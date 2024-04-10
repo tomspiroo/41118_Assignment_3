@@ -1,15 +1,21 @@
 import gym
-import simple_driving
+import simple_driving.envs as senv
 # import pybullet_envs
-import pybullet as p
 import numpy as np
+from assignment3_functions import q_learning
 import math
 from collections import defaultdict
 import pickle
 import torch
 import random
 
-import simple_driving.envs
+import pybullet as p
+import pybullet_utils.bullet_client as bc
+
+# p.disconnect()
+# # Change the connection mode to DIRECT
+# p.connect(p.DIRECT)
+
 
 
 gamma = 0.95                
@@ -30,21 +36,25 @@ step_size = 0.1
 # env = gym.make("SimpleDriving-v0", apply_api_compatibility=True, renders=True, isDiscrete=True)
 ##########################################################################################################################
 
-env_ = simple_driving.envs.SimpleDrivingEnv(isDiscrete=True, renders=True)
+# env_ = senv.SimpleDrivingEnv(env)
+env_ = senv.SimpleDrivingEnv(isDiscrete=True, renders=True)
 
 # env_simple_driving = SimpleDrivingEnv(env)
 
 state, info = env_.reset()
 
 for i in range(200):
-    action = env_.action_space.sample()
+    action = q_learning(env_, gamma, episodes, max_episode_length, epsilon, step_size)
+    # action = env_.action_space.sample()
     state, reward, done, info = env_.step(action)
+    print(env_.car.car)
+    print(env_.goal)
     # print(info)
     # if i % 50 == 0:
     #     print("Step: ", i)
     #     print("Information: ", info)
-    obs = env_.getExtendedObservation()
-    print(obs)
+    # obs = env_.getExtendedObservation()
+    # print(obs)
     if done:
         break
 
