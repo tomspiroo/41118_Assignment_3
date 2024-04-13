@@ -23,8 +23,8 @@ class SimpleDrivingEnv(gym.Env):
                 low=np.array([-1, -.6], dtype=np.float32),
                 high=np.array([1, .6], dtype=np.float32))
         self.observation_space = gym.spaces.box.Box(
-            low=np.array([-40, -40, -1, -1, -5, -5, -10, -10], dtype=np.float32),
-            high=np.array([40, 40, 1, 1, 5, 5, 10, 10], dtype=np.float32))
+            low=np.array([-40, -40], dtype=np.float32),
+            high=np.array([40, 40], dtype=np.float32))
         self.np_random, _ = gym.utils.seeding.np_random()
 
         if renders:
@@ -62,7 +62,7 @@ class SimpleDrivingEnv(gym.Env):
             time.sleep(self._timeStep)
 
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
-          ballpos, ballorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
+          goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
           car_ob = self.getExtendedObservation()
 
           if self._termination():
@@ -73,22 +73,17 @@ class SimpleDrivingEnv(gym.Env):
         # Compute reward as L2 change in distance to goal
         # dist_to_goal = math.sqrt(((car_ob[0] - self.goal[0]) ** 2 +
                                   # (car_ob[1] - self.goal[1]) ** 2))
-        dist_to_goal = math.sqrt(((carpos[0] - ballpos[0]) ** 2 +
-                                  (carpos[1] - ballpos[1]) ** 2))
+        dist_to_goal = math.sqrt(((carpos[0] - goalpos[0]) ** 2 +
+                                  (carpos[1] - goalpos[1]) ** 2))
         # reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
         reward = -dist_to_goal
         self.prev_dist_to_goal = dist_to_goal
 
-        # Done by running off boundaries
-        # if (carpos[0] >= 10 or carpos[0] <= -10 or
-        #         carpos[1] >= 10 or carpos[1] <= -10):
-        #     self.done = True
         # Done by reaching goal
-        if dist_to_goal < 0.5 and not self.reached_goal:
-            print("reached goal")
+        if dist_to_goal < 1.5 and not self.reached_goal:
+            #print("reached goal")
             self.done = True
             self.reached_goal = True
-            reward = 50
 
         ob = car_ob
         return ob, reward, self.done, dict()
@@ -141,7 +136,7 @@ class SimpleDrivingEnv(gym.Env):
             camera_vec = np.matmul(rot_mat, [1, 0, 0])
             up_vec = np.matmul(rot_mat, np.array([0, 0, 1]))
             view_matrix = self._p.computeViewMatrix(pos, pos + camera_vec, up_vec)
-
+            print("View Matrix: ", view_matrix)
             # Display image
             # frame = self._p.getCameraImage(100, 100, view_matrix, proj_matrix)[2]
             # frame = np.reshape(frame, (100, 100, 4))
@@ -161,11 +156,12 @@ class SimpleDrivingEnv(gym.Env):
             car_id = self.car.get_ids()
             base_pos, orn = self._p.getBasePositionAndOrientation(car_id)
             view_matrix = self._p.computeViewMatrixFromYawPitchRoll(cameraTargetPosition=base_pos,
-                                                                    distance=20.0,
+                                                                    distance=100.0,
                                                                     yaw=40.0,
                                                                     pitch=-35,
                                                                     roll=0,
                                                                     upAxisIndex=2)
+            # print("View Matrix:", view_matrix) 
             proj_matrix = self._p.computeProjectionMatrixFOV(fov=60,
                                                              aspect=float(RENDER_WIDTH) / RENDER_HEIGHT,
                                                              nearVal=0.1,
@@ -184,11 +180,11 @@ class SimpleDrivingEnv(gym.Env):
     def getExtendedObservation(self):
         # self._observation = []  #self._racecar.getObservation()
         carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
-        ballpos, ballorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
+        goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
         invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
-        ballPosInCar, ballOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, ballpos, ballorn)
+        goalPosInCar, goalOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, goalpos, goalorn)
 
-        observation = [ballPosInCar[0], ballPosInCar[1]]
+        observation = [goalPosInCar[0], goalPosInCar[1]]
         return observation
 
     def _termination(self):
