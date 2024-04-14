@@ -66,7 +66,7 @@ class SimpleDrivingEnv(gym.Env):
 
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
           goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
-          obstaclepos, obstacleorn = self._p.getBasePositionAndOrientation(self.obstacle_object.obstacle)
+        #   obstaclepos, obstacleorn = self._p.getBasePositionAndOrientation(self.obstacle_object.obstacle)
           car_ob = self.getExtendedObservation()
 
           if self._termination():
@@ -82,12 +82,13 @@ class SimpleDrivingEnv(gym.Env):
         # reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
         reward = -dist_to_goal
         self.prev_dist_to_goal = dist_to_goal
-
-        dist_to_obstacle = math.sqrt(((carpos[0] - obstaclepos[0]) ** 2 +
-                                  (carpos[1] - obstaclepos[1]) ** 2))
         
-        if dist_to_obstacle < 2:
-            reward -= 30
+        # below obstacle avoidance reward function logic turned off due to it not working properly 
+        # dist_to_obstacle = math.sqrt(((carpos[0] - obstaclepos[0]) ** 2 +
+        #                           (carpos[1] - obstaclepos[1]) ** 2))
+        
+        # if dist_to_obstacle < 2:
+        #     reward -= 30
         # else:
         #     reward += 1 # small reward if it stays away from the obstacle
 
@@ -133,7 +134,7 @@ class SimpleDrivingEnv(gym.Env):
         y_obstacle = (carpos[1] + self.goal[1]) / 2
         self.obstacle = (x_obstacle, y_obstacle)
 
-        self.obstacle_object = Obstacle(self._p, self.obstacle)
+        # self.obstacle_object = Obstacle(self._p, self.obstacle) # turned off because obstacle avoidance not fully implemented
 
         self.prev_dist_to_goal = math.sqrt(((carpos[0] - self.goal[0]) ** 2 +
                                            (carpos[1] - self.goal[1]) ** 2))
@@ -197,13 +198,14 @@ class SimpleDrivingEnv(gym.Env):
             return np.array([])
 
     def getExtendedObservation(self):
+        # obstacle stuff turned off for now
         # self._observation = []  #self._racecar.getObservation()
         carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
         goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
-        obstaclepos, obstacleorn = self._p.getBasePositionAndOrientation(self.obstacle_object.obstacle)
+        # obstaclepos, obstacleorn = self._p.getBasePositionAndOrientation(self.obstacle_object.obstacle)
         invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
         goalPosInCar, goalOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, goalpos, goalorn)
-        obstaclePosInCar, obstacleOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, obstaclepos, obstacleorn)
+        # obstaclePosInCar, obstacleOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, obstaclepos, obstacleorn)
 
         # observation = [goalPosInCar[0], goalPosInCar[1], obstaclePosInCar[0], obstaclePosInCar[1]]
         observation = [goalPosInCar[0], goalPosInCar[1]]
