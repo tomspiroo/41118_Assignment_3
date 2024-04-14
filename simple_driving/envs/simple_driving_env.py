@@ -6,6 +6,7 @@ from pybullet_utils import bullet_client as bc
 from simple_driving.resources.car import Car
 from simple_driving.resources.plane import Plane
 from simple_driving.resources.goal import Goal
+from simple_driving.resources.obstacle import Obstacle
 import matplotlib.pyplot as plt
 import time
 
@@ -40,6 +41,8 @@ class SimpleDrivingEnv(gym.Env):
         self.car = None
         self.goal_object = None
         self.goal = None
+        self.obstacle_object = None
+        self.obstacle = None
         self.done = False
         self.prev_dist_to_goal = None
         self.rendered_img = None
@@ -63,6 +66,7 @@ class SimpleDrivingEnv(gym.Env):
 
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
           goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
+          obstaclepos, obstacleorn = self._p.getBasePositionAndOrientation(self.obstacle_object.obstacle)
           car_ob = self.getExtendedObservation()
 
           if self._termination():
@@ -79,11 +83,20 @@ class SimpleDrivingEnv(gym.Env):
         reward = -dist_to_goal
         self.prev_dist_to_goal = dist_to_goal
 
+        dist_to_obstacle = math.sqrt(((carpos[0] - obstaclepos[0]) ** 2 +
+                                  (carpos[1] - obstaclepos[1]) ** 2))
+        
+        if dist_to_obstacle < 2:
+            reward -= 30
+        # else:
+        #     reward += 1 # small reward if it stays away from the obstacle
+
         # Done by reaching goal
         if dist_to_goal < 1.5 and not self.reached_goal:
             #print("reached goal")
             self.done = True
             self.reached_goal = True
+            reward += 50
 
         ob = car_ob
         return ob, reward, self.done, dict()
@@ -115,6 +128,12 @@ class SimpleDrivingEnv(gym.Env):
 
         # Get observation to return
         carpos = self.car.get_observation()
+
+        x_obstacle = (carpos[0] + self.goal[0]) / 2
+        y_obstacle = (carpos[1] + self.goal[1]) / 2
+        self.obstacle = (x_obstacle, y_obstacle)
+
+        self.obstacle_object = Obstacle(self._p, self.obstacle)
 
         self.prev_dist_to_goal = math.sqrt(((carpos[0] - self.goal[0]) ** 2 +
                                            (carpos[1] - self.goal[1]) ** 2))
@@ -181,9 +200,12 @@ class SimpleDrivingEnv(gym.Env):
         # self._observation = []  #self._racecar.getObservation()
         carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
         goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
+        obstaclepos, obstacleorn = self._p.getBasePositionAndOrientation(self.obstacle_object.obstacle)
         invCarPos, invCarOrn = self._p.invertTransform(carpos, carorn)
         goalPosInCar, goalOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, goalpos, goalorn)
+        obstaclePosInCar, obstacleOrnInCar = self._p.multiplyTransforms(invCarPos, invCarOrn, obstaclepos, obstacleorn)
 
+        # observation = [goalPosInCar[0], goalPosInCar[1], obstaclePosInCar[0], obstaclePosInCar[1]]
         observation = [goalPosInCar[0], goalPosInCar[1]]
         return observation
 
