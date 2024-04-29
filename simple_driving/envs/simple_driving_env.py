@@ -81,7 +81,15 @@ class SimpleDrivingEnv(gym.Env):
                                   (carpos[1] - goalpos[1]) ** 2))
         # reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
         reward = -dist_to_goal
-        self.prev_dist_to_goal = dist_to_goal
+        
+        distance_delta = self.prev_dist_to_goal - dist_to_goal
+
+        if distance_delta > 0:
+            reward += distance_delta * 10
+        else:
+            reward -= distance_delta * 5
+
+        reward -= 1.0
         
         # below obstacle avoidance reward function logic turned off due to it not working properly 
         # dist_to_obstacle = math.sqrt(((carpos[0] - obstaclepos[0]) ** 2 +
@@ -93,11 +101,13 @@ class SimpleDrivingEnv(gym.Env):
         #     reward += 1 # small reward if it stays away from the obstacle
 
         # Done by reaching goal
-        if dist_to_goal < 1.5 and not self.reached_goal:
+        if dist_to_goal < 1.0 and not self.reached_goal:
             #print("reached goal")
             self.done = True
             self.reached_goal = True
             reward += 50
+
+        self.prev_dist_to_goal = dist_to_goal
 
         ob = car_ob
         return ob, reward, self.done, dict()

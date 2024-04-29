@@ -12,11 +12,11 @@ import torch.optim as optim
 
 import simple_driving.envs
 
-TRAIN = True  # if set to false will skip training, load the last saved model and use that for testing
+TRAIN = False  # if set to false will skip training, load the last saved model and use that for testing
 
 # Hyper parameters that will be used in the DQN algorithm
 
-EPISODES = 2500                 # number of episodes to run the training for, could be original 5000 but to save computational time was reduced
+EPISODES = 2500                # number of episodes to run the training for, could be original 5000 but to save computational time was reduced
 LEARNING_RATE = 0.00025         # the learning rate for optimising the neural network weights
 MEM_SIZE = 50000                # maximum size of the replay memory - will start overwritting values once this is exceed
 REPLAY_START_SIZE = 10000       # The amount of samples to fill the replay memory with before we start learning
@@ -118,20 +118,23 @@ class DQN_Solver:
             eps_threshold = 1.0
         # if we rolled a value lower than epsilon sample a random action
         num_actions = env.action_space.n
+
+
         if random.random() < eps_threshold:
             # Could probably chnage this such that it prioritises forward and backward movement to get to the goal quicker
-            equal_probabilities = np.ones(num_actions) / num_actions
-            return np.random.choice(np.array(range(num_actions)), p=equal_probabilities)
-
-        # otherwise policy network, Q, chooses action with highest estimated Q-value so far
-        state = torch.tensor(observation).float().detach()
-        state = state.unsqueeze(0)
-        self.policy_network.eval()  # only need forward pass
-        with torch.no_grad():       # so we don't compute gradients - save memory and computation
-            ################ retrieve q-values from policy network, Q ################################
-            q_values = self.policy_network(state)
-            ##########################################################################################
-        return torch.argmax(q_values).item()
+            # equal_probabilities = np.ones(num_actions) / num_actions
+            action_probability = np.array([0.1, 0.3, 0.1, 0.0, 0.0, 0.0, 0.1, 0.3, 0.1])
+            action_probability /= action_probability.sum()
+            return np.random.choice(self.policy_network.action_space, p=action_probability)
+        else:
+            state = torch.tensor(observation).float().detach()
+            state = state.unsqueeze(0)
+            self.policy_network.eval()  # only need forward pass
+            with torch.no_grad():       # so we don't compute gradients - save memory and computation
+                ################ retrieve q-values from policy network, Q ################################
+                q_values = self.policy_network(state)
+                ##########################################################################################
+            return torch.argmax(q_values).item()
 
     # main training loop
     def learn(self):
@@ -199,9 +202,7 @@ if TRAIN:
             action = agent.choose_action(state)
             state_, reward, done, info = env.step(action)
             reward += -abs(state_[1])
-            
-            # if done == True:
-            #     reward = -50
+
 
             ####### add sampled experience to replay buffer ##########
             agent.memory.add(state, action, reward, state_, done)
