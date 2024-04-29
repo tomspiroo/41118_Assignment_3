@@ -66,7 +66,7 @@ class SimpleDrivingEnv(gym.Env):
 
           carpos, carorn = self._p.getBasePositionAndOrientation(self.car.car)
           goalpos, goalorn = self._p.getBasePositionAndOrientation(self.goal_object.goal)
-        #   obstaclepos, obstacleorn = self._p.getBasePositionAndOrientation(self.obstacle_object.obstacle)
+          obstaclepos, obstacleorn = self._p.getBasePositionAndOrientation(self.obstacle_object.obstacle)
           car_ob = self.getExtendedObservation()
 
           if self._termination():
@@ -79,26 +79,26 @@ class SimpleDrivingEnv(gym.Env):
                                   # (car_ob[1] - self.goal[1]) ** 2))
         dist_to_goal = math.sqrt(((carpos[0] - goalpos[0]) ** 2 +
                                   (carpos[1] - goalpos[1]) ** 2))
-        # reward = max(self.prev_dist_to_goal - dist_to_goal, 0)
+    
         reward = -dist_to_goal
         
         distance_delta = self.prev_dist_to_goal - dist_to_goal
 
         if distance_delta > 0:
-            reward += distance_delta * 10
+            reward += distance_delta * 10 
         else:
-            reward -= distance_delta * 5
+            reward -= distance_delta * 5 # small penalty for being further away from goal, can times by less or more depending on how strict the policy is
 
-        reward -= 1.0
+        reward -= 1.5 # small penalty for not getting to the goal quick enough, maybe check self.termination to see if an extended pybullet runtime could be more appropriate, might cause issues with the obstacle?
         
         # below obstacle avoidance reward function logic turned off due to it not working properly 
-        # dist_to_obstacle = math.sqrt(((carpos[0] - obstaclepos[0]) ** 2 +
-        #                           (carpos[1] - obstaclepos[1]) ** 2))
+        dist_to_obstacle = math.sqrt(((carpos[0] - obstaclepos[0]) ** 2 +
+                                  (carpos[1] - obstaclepos[1]) ** 2))
         
-        # if dist_to_obstacle < 2:
-        #     reward -= 30
-        # else:
-        #     reward += 1 # small reward if it stays away from the obstacle
+        if dist_to_obstacle < 2:
+            reward -= 30
+        else:
+            reward += 0.75 # small reward if it stays away from the obstacle
 
         # Done by reaching goal
         if dist_to_goal < 1.0 and not self.reached_goal:
@@ -144,7 +144,7 @@ class SimpleDrivingEnv(gym.Env):
         y_obstacle = (carpos[1] + self.goal[1]) / 2
         self.obstacle = (x_obstacle, y_obstacle)
 
-        # self.obstacle_object = Obstacle(self._p, self.obstacle) # turned off because obstacle avoidance not fully implemented
+        self.obstacle_object = Obstacle(self._p, self.obstacle) # turned off because obstacle avoidance not fully implemented
 
         self.prev_dist_to_goal = math.sqrt(((carpos[0] - self.goal[0]) ** 2 +
                                            (carpos[1] - self.goal[1]) ** 2))
